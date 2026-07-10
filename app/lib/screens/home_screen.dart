@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'deco/sticker_canvas_screen.dart';
 import 'punch/image_select_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -8,10 +9,23 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('퐁당')),
+      appBar: AppBar(
+        title: const Text('퐁당'),
+        actions: [
+          IconButton(
+            tooltip: '다꾸 캔버스 (T203 검증)',
+            icon: const Icon(Icons.auto_awesome_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StickerCanvasScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: const Center(
         child: Text(
-          '도감 그리드는 T302에서 구현 예정입니다.\n오른쪽 아래 + 버튼으로 펀치 모드를 테스트해보세요.',
+          '도감 그리드는 T302에서 구현 예정입니다.\n오른쪽 아래 + 버튼으로 펀치 모드를 테스트해보세요.\n오른쪽 위 ✨ 버튼으로 다꾸 캔버스를 테스트해보세요.',
           textAlign: TextAlign.center,
         ),
       ),
