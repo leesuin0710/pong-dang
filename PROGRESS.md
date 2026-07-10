@@ -43,13 +43,19 @@ pong_dang/
 | T102 | 주요 화면 와이어프레임 구성 | 2026-07-08 | `docs/T102_wireframe.md` |
 | T103 | UI/UX 컬러 톤앤매너 및 디자인 에셋 준비 | 2026-07-08 | `docs/T103_design_guide.md` |
 
-### Phase 1-2: 기술 검증 (진행 중)
+### Phase 1-2: 기술 검증 ✅ 완료 (2026-07-11)
 
 | 태스크 ID | 작업 내용 | 완료일 | 산출물 |
 |-----------|----------|--------|--------|
 | T201 | Flutter 개발 환경 세팅 | 2026-07-10 | `app/` (Flutter 3.44.6, Chrome 검증 완료) |
 | T202 | 이미지 크롭 패키지 테스트 및 펀치 UI 구현 | 2026-07-10 | `app/lib/screens/punch/`, `app/lib/widgets/frame_clipper.dart` — 6종 프레임(엽서/우유곽/원형/사각/폴라로이드/하트) 커스텀 마스킹 + 투명 PNG 크롭 캡처, Chrome에서 검증 완료 |
 | T203 | 다꾸 스페이스 스티커 제어 검증 (드래그/확대/회전 구현) | 2026-07-11 | `app/lib/models/sticker.dart`, `app/lib/screens/deco/sticker_canvas_screen.dart` — `GestureDetector.onScale*` 기반 이동/확대/회전 동시 처리, 스티커 추가(팔레트)/선택(테두리 표시, 맨 앞으로)/삭제/전체삭제, 홈 화면 우측 상단 ✨ 버튼으로 진입. `flutter analyze` 통과, Chrome 기동 검증 완료(제스처 조작은 실제 Chrome 창에서 수동 확인 필요 — 헤드리스 브라우저 자동화 도구 미가용) |
+
+### Phase 1-3: 로컬 MVP 개발 (진행 중)
+
+| 태스크 ID | 작업 내용 | 완료일 | 산출물 |
+|-----------|----------|--------|--------|
+| T301 | 로컬 DB(sqflite) 구조 설계 | 2026-07-11 | `app/lib/data/db/schema.dart`, `app/lib/data/db/app_database.dart`, `app/lib/data/collection_repository.dart`, `app/lib/models/folder.dart`, `app/lib/models/collection_item.dart` — folders/items/labels/item_labels 정규화 테이블 + FK(ON DELETE CASCADE/SET NULL) + 인덱스. `sqflite_common_ffi`로 `test/data/collection_repository_test.dart` 작성해 검증(순차 도감번호 부여, 라벨 중복방지, 폴더 삭제 시 아이템 미분류 처리) — sqflite는 Flutter Web 미지원이라 Chrome 대신 순수 Dart 테스트로 확인 |
 
 ### 진행 중인 태스크
 
@@ -64,7 +70,6 @@ pong_dang/
 **Phase 1-3: 로컬 MVP 개발**
 | 태스크 ID | 작업 내용 | 예정일 |
 |-----------|----------|--------|
-| T301 | 로컬 DB 구조 설계 | 2026-07-18 ~ 07-19 |
 | T302 | 도감 등록 및 리스트 조회 화면 개발 | 2026-07-20 ~ 07-24 |
 | T303 | 폴더 생성 및 카테고리 분류 시스템 구현 | 2026-07-25 ~ 07-28 |
 
@@ -154,10 +159,18 @@ pong_dang/
    - 스티커 팔레트에서 탭하여 추가, 탭하여 선택(맨 앞으로 이동 + 테두리 강조), 선택 삭제/전체 삭제 지원
    - 홈 화면 AppBar 우측 ✨ 아이콘으로 진입 경로 추가
    - `flutter analyze` 통과, `flutter run -d chrome`으로 실행 검증(빌드/기동 성공, 런타임 예외 없음). 실제 드래그/핀치/회전 조작은 헤드리스 브라우저 자동화 도구가 이 환경에 없어 수동 확인 필요
+3. Git: origin/main의 README.md 초기화 커밋 pull, T203 변경사항 커밋/푸시
+4. T301 구현: 로컬 DB(sqflite) 스키마 설계
+   - `sqflite`, `path`, `uuid` 의존성 추가 + `sqflite_common_ffi`(dev, 테스트 전용) 추가
+   - `app/lib/data/db/schema.dart` — folders/items/labels/item_labels 4개 테이블 정규화 설계. items.folder_id는 `ON DELETE SET NULL`(폴더 삭제 시 아이템은 미분류로 유지), item_labels는 `ON DELETE CASCADE`. folder_id/created_at/doc_number/label_id에 인덱스 추가
+   - `app/lib/data/db/app_database.dart` — `openDatabase` 래퍼, `PRAGMA foreign_keys = ON`, 팩토리 주입 가능(운영은 기본 sqflite 팩토리, 테스트는 ffi 팩토리)
+   - `app/lib/models/folder.dart`, `app/lib/models/collection_item.dart` — T101 명세의 데이터 모델을 sqflite row 매핑용 `toRow`/`fromRow`로 구현
+   - `app/lib/data/collection_repository.dart` — 폴더/아이템 생성, 도감번호 자동 순번 부여(트랜잭션 내 `MAX(doc_number)+1`), 라벨 upsert, 폴더별 아이템 조회. 정렬/검색/필터(F3.4/F3.5) 등 조회 확장은 T302 범위로 남겨둠
+   - sqflite는 Flutter Web을 지원하지 않아 Chrome 기동 검증 대신 `sqflite_common_ffi` 기반 `test/data/collection_repository_test.dart` 작성(순차 도감번호, 라벨 중복방지, 폴더 삭제 시 아이템 미분류 전환 검증) — `flutter test` 4개 전체 통과
 
 **다음 세션 TODO:**
 - [ ] (선택) T203 스티커 캔버스에서 드래그/핀치/회전 직접 조작 확인
-- [ ] T301 로컬 DB(sqflite) 스키마 설계 시작
+- [ ] T302 도감 등록 및 리스트 조회 화면 개발 (T301 리포지토리 기반으로 실제 등록 폼/그리드 뷰 구현, 정렬·검색·필터 포함)
 - [ ] 작업 단위별로 커밋 후 GitHub에 푸시하며 진행
 
 ---
@@ -171,6 +184,10 @@ pong_dang/
 | 상태관리 | Riverpod | 컴파일 타임 안정성, BuildContext 불필요, 테스트 용이. 앱 규모(도감/폴더/테마/설정 등 다중 상태) 확장에 유리 | 2026-07-10 |
 | 이미지 크롭 | 커스텀 마스킹 (`image_cropper` 미채택) | image_cropper는 사각형/원형만 지원, 하트·우유곽 등 비정형 프레임 불가. `CustomClipper<Path>`로 화면에 클립 후 `RepaintBoundary.toImage()`로 투명 PNG 직접 캡처 (실제 구현 시 `image` 패키지의 픽셀 마스킹은 불필요했음 — 해당 패키지는 향후 썸네일 생성(F2.6)에 사용 예정) | 2026-07-10 |
 | 스티커 제스처 제어 (T203/Phase 2용) | `GestureDetector.onScale*` 네이티브 사용 (별도 패키지 없음) | `ScaleUpdateDetails`가 scale/rotation/focalPointDelta 모두 제공하여 이동·확대·회전 동시 처리 가능. `matrix_gesture_detector`는 7년간 미유지보수 + Dart 3 비호환이라 미채택 | 2026-07-10 |
+| DB 스키마 - 라벨 정규화 (T301) | 라벨을 `items` 테이블 컬럼(CSV/JSON)으로 두지 않고 `labels` + `item_labels` 조인 테이블로 분리 | F3.5(라벨 기반 필터링/검색)를 인덱스 붙은 조인 쿼리로 처리하기 위함. CSV 방식은 특정 라벨 검색 시 풀스캔+문자열 파싱이 필요해 아이템 수가 늘면 성능이 나빠짐 | 2026-07-11 |
+| DB 스키마 - 도감 번호 부여 (T301) | UUID PK(`items.id`)와 별도로 `doc_number` 정수 컬럼을 두고, 트랜잭션 내 `MAX(doc_number)+1`로 채번 | 스펙(F2.1)의 `id: UUID` + `docNumber: int` 요구를 그대로 반영. sqflite는 단일 로컬 writer라 동시성 문제 없음. 삭제 시 번호에 공백이 생길 수 있으나 재정렬은 하지 않기로 함(도감 번호는 등록 순서 기록용) | 2026-07-11 |
+| 폴더-아이템 삭제 정책 (T301) | `items.folder_id`는 `ON DELETE SET NULL`(폴더 삭제 시 아이템은 미분류로 유지), `item_labels`는 `ON DELETE CASCADE` | 폴더를 지워도 수집한 아이템 자체가 사라지면 안 됨(F4.4 폴더 편집/삭제와 별개로 데이터 보존이 우선). 반면 아이템-라벨 연결은 아이템 삭제 시 같이 정리되는 게 자연스러움 | 2026-07-11 |
+| DB 테스트 방식 (T301) | `sqflite_common_ffi`(dev 전용)로 순수 Dart 유닛 테스트에서 스키마 검증 | `sqflite`는 Flutter Web을 지원하지 않아 T201~T203처럼 Chrome으로 실행 검증 불가. Android 에뮬레이터/실기기도 아직 미설치 상태라, ffi 기반 인메모리 DB로 CRUD·제약조건을 검증하는 것이 가장 빠르고 반복 가능한 방법 | 2026-07-11 |
 
 ---
 
@@ -203,4 +220,4 @@ pong_dang/
 
 ---
 
-*마지막 업데이트: 2026-07-11 Session 3 (T203 완료)*
+*마지막 업데이트: 2026-07-11 Session 3 (T203, T301 완료)*
