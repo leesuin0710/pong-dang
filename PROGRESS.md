@@ -56,6 +56,7 @@ pong_dang/
 | 태스크 ID | 작업 내용 | 완료일 | 산출물 |
 |-----------|----------|--------|--------|
 | T301 | 로컬 DB(sqflite) 구조 설계 | 2026-07-11 | `app/lib/data/db/schema.dart`, `app/lib/data/db/app_database.dart`, `app/lib/data/collection_repository.dart`, `app/lib/models/folder.dart`, `app/lib/models/collection_item.dart` — folders/items/labels/item_labels 정규화 테이블 + FK(ON DELETE CASCADE/SET NULL) + 인덱스. `sqflite_common_ffi`로 `test/data/collection_repository_test.dart` 작성해 검증(순차 도감번호 부여, 라벨 중복방지, 폴더 삭제 시 아이템 미분류 처리) — sqflite는 Flutter Web 미지원이라 Chrome 대신 순수 Dart 테스트로 확인 |
+| T302 | 도감 등록 및 리스트 조회 화면 개발 | 2026-07-11 | `app/lib/screens/register/register_form_screen.dart`(태그/별점/메모 입력 후 저장), `app/lib/screens/detail/item_detail_screen.dart`(상세 보기 + 삭제), `app/lib/screens/home_screen.dart`(2열 그리드 뷰 + 최신순/별점순 정렬), `app/lib/services/image_storage_service.dart`(원본 저장 + `image` 패키지로 썸네일 생성, F2.6), `app/lib/providers/repository_providers.dart`(Riverpod DI), `app/lib/main.dart`(앱 시작 시 DB 오픈 후 주입). 크롭 결과 화면(T202 산출물)은 실제 등록 폼으로 교체됨. 검색/필터(F3.5)와 폴더 선택은 T303 이후로 보류. **실제 안드로이드 기기(삼성 SM-S936N)에 설치해 등록→그리드→상세→삭제 전체 플로우 수동 검증 완료** (Android SDK 신규 설치 + AGP 9.0.1→8.11.1 다운그레이드로 빌드 문제 해결 — 아래 이슈 참고) |
 
 ### 진행 중인 태스크
 
@@ -70,7 +71,6 @@ pong_dang/
 **Phase 1-3: 로컬 MVP 개발**
 | 태스크 ID | 작업 내용 | 예정일 |
 |-----------|----------|--------|
-| T302 | 도감 등록 및 리스트 조회 화면 개발 | 2026-07-20 ~ 07-24 |
 | T303 | 폴더 생성 및 카테고리 분류 시스템 구현 | 2026-07-25 ~ 07-28 |
 
 ---
@@ -167,10 +167,35 @@ pong_dang/
    - `app/lib/models/folder.dart`, `app/lib/models/collection_item.dart` — T101 명세의 데이터 모델을 sqflite row 매핑용 `toRow`/`fromRow`로 구현
    - `app/lib/data/collection_repository.dart` — 폴더/아이템 생성, 도감번호 자동 순번 부여(트랜잭션 내 `MAX(doc_number)+1`), 라벨 upsert, 폴더별 아이템 조회. 정렬/검색/필터(F3.4/F3.5) 등 조회 확장은 T302 범위로 남겨둠
    - sqflite는 Flutter Web을 지원하지 않아 Chrome 기동 검증 대신 `sqflite_common_ffi` 기반 `test/data/collection_repository_test.dart` 작성(순차 도감번호, 라벨 중복방지, 폴더 삭제 시 아이템 미분류 전환 검증) — `flutter test` 4개 전체 통과
+5. Git: T301 변경사항 커밋/푸시
+6. T302 구현: 도감 등록 및 리스트 조회 화면
+   - 의존성 추가: `path_provider`(파일 저장 경로), `intl`(날짜 포맷). `sqflite_common_ffi`는 dev → 일반 의존성으로 이동(데스크톱 실행 시 앱 코드 자체가 팩토리를 교체해야 해서 런타임에도 필요)
+   - `AppDatabase.useFfiFactoryOnDesktop()` 추가 — Windows/Linux는 네이티브 sqflite 플러그인이 없어 `main()`에서 ffi 팩토리로 교체 후 `openDefault()`(문서 디렉터리에 `pongdang.db` 생성) 호출
+   - `lib/providers/repository_providers.dart` — Riverpod `Provider`로 `CollectionRepository`/`ImageStorageService` 주입(실제 인스턴스는 `main()`에서 `overrideWithValue`로 연결). T101에서 Riverpod을 채택했지만 지금까지 실사용이 없었는데, 이번에 처음으로 실제 상태 공유에 사용
+   - `lib/services/image_storage_service.dart` — 크롭 PNG를 문서 디렉터리 `images/originals/`에 저장 + `image` 패키지로 320px 폭 썸네일을 만들어 `images/thumbnails/`에 저장(F5.1, F2.6 — T202 결정사항에서 미뤄뒀던 `image` 패키지 활용을 이번에 실현)
+   - `lib/screens/register/register_form_screen.dart` — 크롭 결과 미리보기 + 별점(`RatingStars`)/태그 칩 입력/메모 입력 후 저장 시 이미지 저장 → `CollectionRepository.createItem` 호출 → 홈으로 복귀. 기존 `crop_result_screen.dart`(T202의 확인용 화면)를 대체하며 삭제
+   - `lib/screens/detail/item_detail_screen.dart` — 풀스크린 이미지 + 메타데이터(별점/태그/메모/등록일시) + 삭제(DB 행 + 이미지 파일 정리, 확인 다이얼로그 포함)
+   - `lib/screens/home_screen.dart` — 플레이스홀더 텍스트를 2열 `GridView`(썸네일 + 도감번호 + 별점)로 교체, AppBar에 정렬 메뉴(최신순/별점순, F3.4) 추가, 빈 상태 안내 문구 유지. 검색/필터(F3.5)와 폴더 선택 UI는 T303으로 보류
+   - `CollectionRepository`에 `deleteItem`, `listItems(sortBy:)`, `createItem(id:)`(파일명에 쓸 id를 화면에서 먼저 생성하도록) 추가
+   - 공용 위젯 분리: `lib/widgets/checkerboard_background.dart`, `lib/widgets/rating_stars.dart` (등록 폼/상세 화면에서 재사용)
+   - 테스트: `test/widget_test.dart`를 Riverpod 오버라이드 + 인메모리 DB로 갱신하는 과정에서 `testWidgets`가 기본적으로 가상 시간(zone)에서 동작해 `sqflite_common_ffi`의 실제 비동기(격리 프로세스) 호출이 끝나지 않는 문제 발견 → `tester.runAsync()` + 실제 딜레이 후 `pump()`로 해결. `test/data/collection_repository_test.dart`에 `deleteItem`, 별점순 정렬 테스트 2건 추가 — `flutter test` 6개 전체 통과, `flutter analyze` 이상 없음
+   - **실행 검증 한계**: 이 환경에는 Visual Studio "Desktop development with C++" 워크로드와 Android SDK가 모두 없어(`flutter doctor`로 확인) `flutter run -d windows`/에뮬레이터 실행이 불가능하고, sqflite가 Flutter Web을 지원하지 않아 Chrome도 쓸 수 없음. 따라서 전체 등록→조회→상세→삭제 플로우는 실제 기기에서 사람이 직접 확인 필요(코드 리뷰 + 정적 분석 + 유닛/위젯 테스트로만 검증됨)
+
+5. Android SDK 신규 설치 + 실기기(삼성 SM-S936N, Android 16) 연동
+   - 디스크 용량이 10GB 남짓으로 빠듯해 Visual Studio C++ 워크로드 대신 Android SDK만 설치(커맨드라인 툴 + platform-tools + platform 35/36 + build-tools) — 에뮬레이터 이미지는 설치하지 않고 실기기 USB 디버깅으로 검증(가장 가벼운 경로)
+   - `flutter run -d <실기기>` 시도 중 AGP 9.0.1(`flutter create`가 기본 생성한 버전)이 "AGP 9+는 new DSL만 읽는다"는 오류로 빌드 실패 — `android.newDsl=false`가 이미 설정돼 있었는데도 재현됨. AGP를 8.11.1(+ Kotlin 2.2.20)로 낮추고 `compileSdk`/`targetSdk`를 다시 36(flutter 기본값)으로 맞춰서 해결
+   - 빌드 시행착오 과정에서 Gradle `transforms` 캐시가 여러 GB씩 불어나 디스크가 804MB까지 떨어지는 위험한 상황 발생 → 유저가 C드라이브 공간을 12.4GB로 확보해준 뒤 재시도로 해결. 원인은 살아있는 Gradle 데몬/VS Code Java 확장이 캐시 파일을 잠그고 있던 것
+   - 실기기에 앱을 설치해 `adb`(screencap + uiautomator dump + input tap/text)로 직접 조작하며 T302 전체 플로우(홈 → 펀치 → 갤러리 선택 → 크롭 → 등록 폼 → 저장 → 그리드 → 상세 → 삭제) 스크린샷 기반 검증
+   - **실기기 검증으로 실제 버그 발견**: `home_screen.dart`의 `_reload()`가 `setState(() => _itemsFuture = _load())`로 작성돼 있어, 대입식이 반환하는 `Future`를 setState 콜백이 그대로 반환하는 꼴이 되어 "setState() callback argument returned a Future" 런타임 예외 발생 → 등록 후 홈 화면이 새로고침되지 않는 버그였음(데이터는 정상 저장되고 있었음). `setState(() { _itemsFuture = _load(); })` 블록 바디로 수정해 해결. `flutter analyze`/유닛테스트로는 잡히지 않고 실기기 조작에서만 드러난 버그
+6. 유저 피드백 반영 (실기기 확인 중 UX 이슈 2건 제보)
+   - 등록 폼 태그 입력: 태그 칩이 입력 필드 왼쪽에 쌓이며 입력 필드가 계속 밀리는 문제 → 입력 필드를 항상 고정 위치(상단)에 두고, 칩은 그 아래 별도 `Wrap`으로 이동(칩끼리는 기존처럼 옆으로 배치, 필드 위치는 고정)
+   - 도감 상세 화면: 투명 배경이 체커보드 패턴으로 보여 거슬리는 문제 → 등록 폼(크롭 확인용) 미리보기는 체커보드 유지, 상세 화면은 `Theme.of(context).scaffoldBackgroundColor`로 배경을 채워 앱 배경색과 자연스럽게 어우러지도록 수정
+   - 두 수정 모두 재빌드 후 실기기에서 스크린샷으로 재검증 완료
 
 **다음 세션 TODO:**
 - [ ] (선택) T203 스티커 캔버스에서 드래그/핀치/회전 직접 조작 확인
-- [ ] T302 도감 등록 및 리스트 조회 화면 개발 (T301 리포지토리 기반으로 실제 등록 폼/그리드 뷰 구현, 정렬·검색·필터 포함)
+- [ ] T303 폴더 생성 및 카테고리 분류 시스템 구현 (폴더 선택 UI를 등록 폼에도 연결)
+- [ ] F3.5 검색/라벨 필터링 UI (리포지토리 쿼리는 준비돼 있음, 화면 미구현)
 - [ ] 작업 단위별로 커밋 후 GitHub에 푸시하며 진행
 
 ---
@@ -187,7 +212,12 @@ pong_dang/
 | DB 스키마 - 라벨 정규화 (T301) | 라벨을 `items` 테이블 컬럼(CSV/JSON)으로 두지 않고 `labels` + `item_labels` 조인 테이블로 분리 | F3.5(라벨 기반 필터링/검색)를 인덱스 붙은 조인 쿼리로 처리하기 위함. CSV 방식은 특정 라벨 검색 시 풀스캔+문자열 파싱이 필요해 아이템 수가 늘면 성능이 나빠짐 | 2026-07-11 |
 | DB 스키마 - 도감 번호 부여 (T301) | UUID PK(`items.id`)와 별도로 `doc_number` 정수 컬럼을 두고, 트랜잭션 내 `MAX(doc_number)+1`로 채번 | 스펙(F2.1)의 `id: UUID` + `docNumber: int` 요구를 그대로 반영. sqflite는 단일 로컬 writer라 동시성 문제 없음. 삭제 시 번호에 공백이 생길 수 있으나 재정렬은 하지 않기로 함(도감 번호는 등록 순서 기록용) | 2026-07-11 |
 | 폴더-아이템 삭제 정책 (T301) | `items.folder_id`는 `ON DELETE SET NULL`(폴더 삭제 시 아이템은 미분류로 유지), `item_labels`는 `ON DELETE CASCADE` | 폴더를 지워도 수집한 아이템 자체가 사라지면 안 됨(F4.4 폴더 편집/삭제와 별개로 데이터 보존이 우선). 반면 아이템-라벨 연결은 아이템 삭제 시 같이 정리되는 게 자연스러움 | 2026-07-11 |
-| DB 테스트 방식 (T301) | `sqflite_common_ffi`(dev 전용)로 순수 Dart 유닛 테스트에서 스키마 검증 | `sqflite`는 Flutter Web을 지원하지 않아 T201~T203처럼 Chrome으로 실행 검증 불가. Android 에뮬레이터/실기기도 아직 미설치 상태라, ffi 기반 인메모리 DB로 CRUD·제약조건을 검증하는 것이 가장 빠르고 반복 가능한 방법 | 2026-07-11 |
+| DB 테스트 방식 (T301) | `sqflite_common_ffi`로 순수 Dart 유닛 테스트에서 스키마 검증 | `sqflite`는 Flutter Web을 지원하지 않아 T201~T203처럼 Chrome으로 실행 검증 불가. Android 에뮬레이터/실기기도 아직 미설치 상태라, ffi 기반 인메모리 DB로 CRUD·제약조건을 검증하는 것이 가장 빠르고 반복 가능한 방법 | 2026-07-11 |
+| 데스크톱 DB 팩토리 (T302) | Windows/Linux에서는 `main()` 시작 시 `sqflite_common_ffi`의 `databaseFactoryFfi`로 교체(`AppDatabase.useFfiFactoryOnDesktop`), Android/iOS는 기본 `sqflite` 팩토리 그대로 사용 | 순정 `sqflite` 플러그인은 데스크톱용 플랫폼 채널이 없음. 개발 중 실행 타겟을 Chrome(Web 미지원)에서 Windows 데스크톱으로 옮기려면 필요. `sqflite_common_ffi`가 런타임에도 쓰이게 되어 dev → 일반 의존성으로 이동 | 2026-07-11 |
+| 썸네일 생성 (T302, F2.6) | `image` 패키지로 크롭 PNG를 320px 폭으로 리사이즈해 별도 파일로 저장 | T202 결정사항에서 "향후 썸네일 생성에 사용 예정"으로 남겨뒀던 `image` 패키지를 실제로 사용. 그리드 뷰에서 원본 대신 썸네일을 그려 로딩 비용을 줄임(비기능 요구사항: 썸네일 로딩 100ms 이내) | 2026-07-11 |
+| 위젯 테스트에서 sqflite 사용 (T302) | `testWidgets` 내에서 `sqflite_common_ffi`를 쓸 때는 `tester.runAsync()`로 감싸고, `pumpAndSettle()` 대신 실제 `Future.delayed` + `pump()` 사용 | `testWidgets`는 기본적으로 가상 시간(zone)에서 동작해 ffi가 사용하는 실제 비동기(격리 프로세스) 응답을 받지 못해 무한 대기함. `pumpAndSettle()`도 인디케이터의 반복 애니메이션 때문에 타임아웃됨 — 실제 원인을 T302에서 처음 발견 | 2026-07-11 |
+| 실기기 검증 환경 (T302) | Windows 데스크톱/에뮬레이터 대신 실제 안드로이드 폰(USB 디버깅)으로 검증 | 디스크 용량이 제한적이라 Visual Studio C++ 워크로드(7~10GB)나 에뮬레이터 이미지보다 가벼운 경로 필요. 실기기가 최종 배포 타겟(Android 8+)과도 더 가까움 | 2026-07-11 |
+| AGP 버전 (android/settings.gradle.kts) | `flutter create`가 기본 생성한 9.0.1 대신 8.11.1 + Kotlin 2.2.20 사용, `compileSdk`/`targetSdk`는 36 유지 | AGP 9.0.1은 "new DSL" 관련 버그로 Flutter Gradle 플러그인과 충돌(`android.newDsl=false`로도 회피 안 됨). 8.7.3 등 더 낮은 버전은 반대로 `androidx.core` 등 의존성이 AGP 8.9.1+/SDK 36을 요구해 실패 — 8.11.1이 현재 의존성 조합과 맞는 지점 | 2026-07-11 |
 
 ---
 
@@ -195,7 +225,8 @@ pong_dang/
 
 | ID | 내용 | 상태 | 해결 방안 |
 |----|------|------|----------|
-| - | 현재 이슈 없음 | - | - |
+| I001 | T302부터 실제 파일 저장(`path_provider`)이 들어가면서 sqflite가 Flutter Web을 지원하지 않아 Chrome 실행 검증이 불가능해짐. Windows 데스크톱 실행도 Visual Studio C++ 워크로드 미설치로 불가 | 해결 (2026-07-11) | Android SDK(커맨드라인 툴만, 에뮬레이터 없이)를 설치하고 실기기 USB 디버깅으로 검증 경로 확보. `flutter doctor`의 Android 툴체인 항목 초록불 확인 |
+| I002 | Android 빌드 중 디스크가 804MB까지 떨어지는 위험 상황 발생. Gradle `transforms` 캐시가 AGP 버전을 바꿀 때마다 수 GB씩 재생성되고, 살아있는 Gradle 데몬/VS Code Java 확장이 캐시 파일을 잠가 정리도 어려웠음 | 해결 (2026-07-11) | 유저가 C드라이브 여유 공간을 12.4GB로 확보. 재발 방지를 위해 이후 세션에서 Android 빌드 전 `df -h /c`로 여유 공간(최소 5GB 권장) 먼저 확인할 것 |
 
 ---
 
@@ -220,4 +251,4 @@ pong_dang/
 
 ---
 
-*마지막 업데이트: 2026-07-11 Session 3 (T203, T301 완료)*
+*마지막 업데이트: 2026-07-11 Session 3 (T203, T301, T302 완료, 실기기 검증 및 버그 수정)*

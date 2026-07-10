@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/frame_type.dart';
 import '../../widgets/frame_clipper.dart';
-import 'crop_result_screen.dart';
+import '../register/register_form_screen.dart';
 
 class CropScreen extends StatefulWidget {
   final Uint8List imageBytes;
@@ -48,7 +48,9 @@ class _CropScreenState extends State<CropScreen> {
 
     if (!mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => CropResultScreen(pngBytes: pngBytes)),
+      MaterialPageRoute(
+        builder: (_) => RegisterFormScreen(pngBytes: pngBytes),
+      ),
     );
   }
 

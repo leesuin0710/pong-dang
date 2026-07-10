@@ -81,4 +81,43 @@ void main() {
     expect(remaining.single.id, item.id);
     expect(remaining.single.folderId, isNull);
   });
+
+  test('deleteItem removes the row and its label links', () async {
+    final item = await repo.createItem(
+      imagePath: '/a.png',
+      thumbnailPath: '/a_t.png',
+      labels: ['카페'],
+    );
+
+    await repo.deleteItem(item.id);
+
+    expect(await repo.listItems(), isEmpty);
+    final linkRows = await appDb.db.query(
+      'item_labels',
+      where: 'item_id = ?',
+      whereArgs: [item.id],
+    );
+    expect(linkRows, isEmpty);
+  });
+
+  test('listItems sorts by rating when requested', () async {
+    await repo.createItem(
+      imagePath: '/a.png',
+      thumbnailPath: '/a_t.png',
+      rating: 2,
+    );
+    await repo.createItem(
+      imagePath: '/b.png',
+      thumbnailPath: '/b_t.png',
+      rating: 5,
+    );
+    await repo.createItem(
+      imagePath: '/c.png',
+      thumbnailPath: '/c_t.png',
+      rating: 3,
+    );
+
+    final byRating = await repo.listItems(sortBy: ItemSortOrder.ratingDesc);
+    expect(byRating.map((e) => e.rating).toList(), [5, 3, 2]);
+  });
 }

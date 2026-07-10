@@ -7,9 +7,10 @@ import 'db/app_database.dart';
 
 const _uuid = Uuid();
 
-/// Thin data-access layer over [AppDatabase]. Covers just enough CRUD to
-/// validate the T301 schema (create + list); sort/search/filter queries for
-/// F3.4/F3.5 land with the viewer screen in T302.
+enum ItemSortOrder { newest, ratingDesc }
+
+/// Data-access layer over [AppDatabase] covering the F2/F3 registry +
+/// viewer flows. Search (F3.5) is not implemented yet.
 class CollectionRepository {
   CollectionRepository(this._appDb);
   final AppDatabase _appDb;
@@ -34,6 +35,7 @@ class CollectionRepository {
   }
 
   Future<CollectionItem> createItem({
+    String? id,
     required String imagePath,
     required String thumbnailPath,
     int rating = 0,
@@ -41,7 +43,7 @@ class CollectionRepository {
     String? folderId,
     List<String> labels = const [],
   }) async {
-    final id = _uuid.v4();
+    final itemId = id ?? _uuid.v4();
     final createdAt = DateTime.now();
 
     return _db.transaction((txn) async {
@@ -53,7 +55,7 @@ class CollectionRepository {
       final docNumber = maxDocNumber + 1;
 
       final item = CollectionItem(
-        id: id,
+        id: itemId,
         docNumber: docNumber,
         imagePath: imagePath,
         thumbnailPath: thumbnailPath,
@@ -70,7 +72,7 @@ class CollectionRepository {
         if (labelName.isEmpty) continue;
         final labelId = await _upsertLabel(txn, labelName);
         await txn.insert('item_labels', {
-          'item_id': id,
+          'item_id': itemId,
           'label_id': labelId,
         }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
@@ -94,15 +96,22 @@ class CollectionRepository {
     return id;
   }
 
-  Future<List<CollectionItem>> listItems({String? folderId}) async {
+  Future<List<CollectionItem>> listItems({
+    String? folderId,
+    ItemSortOrder sortBy = ItemSortOrder.newest,
+  }) async {
     final where = folderId == null ? null : 'items.folder_id = ?';
     final whereArgs = folderId == null ? null : [folderId];
+    final orderBy = switch (sortBy) {
+      ItemSortOrder.newest => 'doc_number DESC',
+      ItemSortOrder.ratingDesc => 'rating DESC, doc_number DESC',
+    };
 
     final rows = await _db.query(
       'items',
       where: where,
       whereArgs: whereArgs,
-      orderBy: 'doc_number DESC',
+      orderBy: orderBy,
     );
 
     final items = <CollectionItem>[];
@@ -125,5 +134,9 @@ class CollectionRepository {
       );
     }
     return items;
+  }
+
+  Future<void> deleteItem(String id) async {
+    await _db.delete('items', where: 'id = ?', whereArgs: [id]);
   }
 }
