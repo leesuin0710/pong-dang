@@ -29,6 +29,7 @@ pong_dang/
 ```
 
 > Flutter SDK 설치 위치: `C:\src\flutter` (User PATH 등록됨)
+> GitHub 저장소: https://github.com/leesuin0710/pong-dang (2026-07-10 연동, `main` 브랜치) — 이후 작업 단위별로 커밋/푸시하며 진행
 
 ---
 
@@ -47,6 +48,7 @@ pong_dang/
 | 태스크 ID | 작업 내용 | 완료일 | 산출물 |
 |-----------|----------|--------|--------|
 | T201 | Flutter 개발 환경 세팅 | 2026-07-10 | `app/` (Flutter 3.44.6, Chrome 검증 완료) |
+| T202 | 이미지 크롭 패키지 테스트 및 펀치 UI 구현 | 2026-07-10 | `app/lib/screens/punch/`, `app/lib/widgets/frame_clipper.dart` — 6종 프레임(엽서/우유곽/원형/사각/폴라로이드/하트) 커스텀 마스킹 + 투명 PNG 크롭 캡처, Chrome에서 검증 완료 |
 
 ### 진행 중인 태스크
 
@@ -59,8 +61,7 @@ pong_dang/
 **Phase 1-2: 기술 검증**
 | 태스크 ID | 작업 내용 | 예정일 |
 |-----------|----------|--------|
-| T202 | 이미지 크롭 패키지 테스트 및 펀치 UI 구현 | 2026-07-11 ~ 07-14 |
-| T203 | 다꾸 스페이스 스티커 제어 검증 | 2026-07-15 ~ 07-17 |
+| T203 | 다꾸 스페이스 스티커 제어 검증 (드래그/확대/회전 구현 — 사전조사 완료, 구현은 미착수) | 2026-07-15 ~ 07-17 |
 
 **Phase 1-3: 로컬 MVP 개발**
 | 태스크 ID | 작업 내용 | 예정일 |
@@ -127,6 +128,24 @@ pong_dang/
 - [ ] 개발 환경 오류 발생 시 에러 로그로 디버깅
 - [ ] 상태관리 라이브러리 선택 (Provider vs Riverpod)
 
+### Session 2 (2026-07-10)
+
+**작업 내용:**
+1. 미결정 기술 사항 확정: 로컬 DB(sqflite), 상태관리(Riverpod)
+2. T202 사전조사: `image_cropper`는 사각형/원형만 지원 확인 → 커스텀 마스킹 방식 채택
+3. T203 사전조사: 스티커 드래그/확대/회전은 `GestureDetector.onScale*` 네이티브 기능으로 충분, `matrix_gesture_detector`는 미유지보수라 미채택
+4. T201 완료: Flutter 3.44.6 설치(`C:\src\flutter`), Windows 개발자 모드 활성화, `app/` 프로젝트 생성, Chrome에서 실행 검증
+5. T202 완료: 펀치 UI(이미지 선택 → 프레임 선택/크롭 → 결과 확인) 구현
+   - `CustomClipper<Path>` 기반 6종 프레임 마스킹, `RepaintBoundary.toImage()`로 투명 PNG 캡처
+   - 버그 수정: 크롭 결과 화면에서 고해상도(pixelRatio 3.0) 캡처본을 그대로 표시해 레이아웃 오버플로우 발생 → 260x260 고정 표시 크기 + `BoxFit.contain`으로 수정
+6. Git 저장소 초기화 + GitHub 연동 (https://github.com/leesuin0710/pong-dang)
+
+**다음 세션 TODO:**
+- [ ] T203 실제 구현 (다꾸 캔버스 스티커 드래그/확대/회전) — Phase 2 대비 검증
+- [ ] T301 로컬 DB(sqflite) 스키마 설계 시작
+- [ ] Android SDK 설치 여부 결정 (실기기/에뮬레이터 검증 필요 시점에)
+- [ ] 작업 단위별로 커밋 후 GitHub에 푸시하며 진행
+
 ---
 
 ## 기술 결정 사항
@@ -169,4 +188,4 @@ pong_dang/
 
 ---
 
-*마지막 업데이트: 2026-07-08 Session 1 (Phase 1-1 완료, 일정표 동기화)*
+*마지막 업데이트: 2026-07-10 Session 2 (T201/T202 완료, GitHub 연동)*
