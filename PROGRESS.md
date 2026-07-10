@@ -155,7 +155,7 @@ pong_dang/
 | 프레임워크 | Flutter | UI 자유도, 크로스플랫폼, AI 협업 최적화 | 기획 단계 |
 | 로컬 DB | sqflite (SQLite) | 폴더 계층구조(parentId), item-folder FK, 정렬/필터/검색 쿼리에 적합. Phase 3 클라우드 동기화(Supabase/Postgres 등) 전환 시 스키마 매핑 자연스러움 | 2026-07-10 |
 | 상태관리 | Riverpod | 컴파일 타임 안정성, BuildContext 불필요, 테스트 용이. 앱 규모(도감/폴더/테마/설정 등 다중 상태) 확장에 유리 | 2026-07-10 |
-| 이미지 크롭 | 커스텀 마스킹 (`image_cropper` 미채택) | image_cropper는 사각형/원형만 지원, 하트·우유곽 등 비정형 프레임 불가. `CustomClipper<Path>`(UI) + `image` 패키지(픽셀 처리)로 직접 구현 | 2026-07-10 |
+| 이미지 크롭 | 커스텀 마스킹 (`image_cropper` 미채택) | image_cropper는 사각형/원형만 지원, 하트·우유곽 등 비정형 프레임 불가. `CustomClipper<Path>`로 화면에 클립 후 `RepaintBoundary.toImage()`로 투명 PNG 직접 캡처 (실제 구현 시 `image` 패키지의 픽셀 마스킹은 불필요했음 — 해당 패키지는 향후 썸네일 생성(F2.6)에 사용 예정) | 2026-07-10 |
 | 스티커 제스처 제어 (T203/Phase 2용) | `GestureDetector.onScale*` 네이티브 사용 (별도 패키지 없음) | `ScaleUpdateDetails`가 scale/rotation/focalPointDelta 모두 제공하여 이동·확대·회전 동시 처리 가능. `matrix_gesture_detector`는 7년간 미유지보수 + Dart 3 비호환이라 미채택 | 2026-07-10 |
 
 ---
@@ -172,7 +172,8 @@ pong_dang/
 
 - Flutter 공식 문서: https://flutter.dev/docs
 - image_picker 패키지: https://pub.dev/packages/image_picker
-- Hive 패키지: https://pub.dev/packages/hive
+- sqflite 패키지 (로컬 DB, 채택됨): https://pub.dev/packages/sqflite
+- ~~Hive 패키지~~: https://pub.dev/packages/hive (검토 후 미채택, sqflite로 결정됨 — 기술 결정 사항 참고)
 - archive 패키지 (ZIP): https://pub.dev/packages/archive
 - share_plus 패키지: https://pub.dev/packages/share_plus
 - file_picker 패키지: https://pub.dev/packages/file_picker

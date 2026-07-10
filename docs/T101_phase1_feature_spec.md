@@ -38,9 +38,9 @@ Phase 1은 **수집 및 도감 (MVP)** 단계로, 서버 없이 로컬 저장소
 ### 기술 요구사항
 - `image_picker` 패키지 (카메라/갤러리 접근)
 - 커스텀 마스킹 로직 (`image_cropper`는 사각형/원형만 지원하여 하트·우유곽·폴라로이드 등 비정형 프레임에 부적합 → 채택 안 함)
-- `CustomClipper<Path>` + `GestureDetector`/`InteractiveViewer`로 화면상 프레임 오버레이(드래그/핀치) 구현
-- `image` 패키지로 실제 픽셀 단위 크롭 + 알파 마스크 적용 후 투명 PNG 인코딩 (F1.4 최종 출력)
-- `HapticFeedback` API + `audioplayers` 패키지
+- `CustomClipper<Path>` + `GestureDetector`(pan/scale)로 화면상 프레임 오버레이 구현 (구현 완료, T202)
+- `RepaintBoundary.toImage()` + `toByteData(png)`로 클립된 화면을 그대로 캡처해 투명 PNG 생성 (F1.4 최종 출력, 구현 완료 — 별도 픽셀 마스킹 라이브러리 불필요)
+- `HapticFeedback` API (구현 완료) + `audioplayers` 패키지 (사운드 에셋 미확보로 보류)
 
 ### 프레임 프리셋 목록 (MVP)
 | 프레임명 | 형태 | 비율/크기 |
@@ -50,6 +50,9 @@ Phase 1은 **수집 및 도감 (MVP)** 단계로, 서버 없이 로컬 저장소
 | 원형 | 정원 | 1:1 |
 | 정사각형 | 정사각형 | 1:1 |
 | 폴라로이드 | 하단 여백 직사각형 | 커스텀 |
+| 하트 | 하트 모양 | 1:1 |
+
+> T102 와이어프레임의 프레임 선택 바와 맞춰 하트 프레임 포함 총 6종. T202에서 6종 모두 구현 완료.
 
 ---
 
