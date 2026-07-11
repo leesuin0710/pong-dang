@@ -51,12 +51,13 @@ pong_dang/
 | T202 | 이미지 크롭 패키지 테스트 및 펀치 UI 구현 | 2026-07-10 | `app/lib/screens/punch/`, `app/lib/widgets/frame_clipper.dart` — 6종 프레임(엽서/우유곽/원형/사각/폴라로이드/하트) 커스텀 마스킹 + 투명 PNG 크롭 캡처, Chrome에서 검증 완료 |
 | T203 | 다꾸 스페이스 스티커 제어 검증 (드래그/확대/회전 구현) | 2026-07-11 | `app/lib/models/sticker.dart`, `app/lib/screens/deco/sticker_canvas_screen.dart` — `GestureDetector.onScale*` 기반 이동/확대/회전 동시 처리, 스티커 추가(팔레트)/선택(테두리 표시, 맨 앞으로)/삭제/전체삭제, 홈 화면 우측 상단 ✨ 버튼으로 진입. `flutter analyze` 통과, Chrome 기동 검증 완료(제스처 조작은 실제 Chrome 창에서 수동 확인 필요 — 헤드리스 브라우저 자동화 도구 미가용) |
 
-### Phase 1-3: 로컬 MVP 개발 (진행 중)
+### Phase 1-3: 로컬 MVP 개발 ✅ 완료 (2026-07-11)
 
 | 태스크 ID | 작업 내용 | 완료일 | 산출물 |
 |-----------|----------|--------|--------|
 | T301 | 로컬 DB(sqflite) 구조 설계 | 2026-07-11 | `app/lib/data/db/schema.dart`, `app/lib/data/db/app_database.dart`, `app/lib/data/collection_repository.dart`, `app/lib/models/folder.dart`, `app/lib/models/collection_item.dart` — folders/items/labels/item_labels 정규화 테이블 + FK(ON DELETE CASCADE/SET NULL) + 인덱스. `sqflite_common_ffi`로 `test/data/collection_repository_test.dart` 작성해 검증(순차 도감번호 부여, 라벨 중복방지, 폴더 삭제 시 아이템 미분류 처리) — sqflite는 Flutter Web 미지원이라 Chrome 대신 순수 Dart 테스트로 확인 |
-| T302 | 도감 등록 및 리스트 조회 화면 개발 | 2026-07-11 | `app/lib/screens/register/register_form_screen.dart`(태그/별점/메모 입력 후 저장), `app/lib/screens/detail/item_detail_screen.dart`(상세 보기 + 삭제), `app/lib/screens/home_screen.dart`(2열 그리드 뷰 + 최신순/별점순 정렬), `app/lib/services/image_storage_service.dart`(원본 저장 + `image` 패키지로 썸네일 생성, F2.6), `app/lib/providers/repository_providers.dart`(Riverpod DI), `app/lib/main.dart`(앱 시작 시 DB 오픈 후 주입). 크롭 결과 화면(T202 산출물)은 실제 등록 폼으로 교체됨. 검색/필터(F3.5)와 폴더 선택은 T303 이후로 보류. **실제 안드로이드 기기(삼성 SM-S936N)에 설치해 등록→그리드→상세→삭제 전체 플로우 수동 검증 완료** (Android SDK 신규 설치 + AGP 9.0.1→8.11.1 다운그레이드로 빌드 문제 해결 — 아래 이슈 참고) |
+| T302 | 도감 등록 및 리스트 조회 화면 개발 | 2026-07-11 | `app/lib/screens/register/register_form_screen.dart`(태그/별점/메모 입력 후 저장), `app/lib/screens/detail/item_detail_screen.dart`(상세 보기 + 삭제), `app/lib/screens/home_screen.dart`(2열 그리드 뷰 + 최신순/별점순 정렬), `app/lib/services/image_storage_service.dart`(원본 저장 + `image` 패키지로 썸네일 생성, F2.6), `app/lib/providers/repository_providers.dart`(Riverpod DI), `app/lib/main.dart`(앱 시작 시 DB 오픈 후 주입). 크롭 결과 화면(T202 산출물)은 실제 등록 폼으로 교체됨. **실제 안드로이드 기기(삼성 SM-S936N)에 설치해 등록→그리드→상세→삭제 전체 플로우 수동 검증 완료** (Android SDK 신규 설치 + AGP 9.0.1→8.11.1 다운그레이드로 빌드 문제 해결 — 아래 이슈 참고) |
+| T303 | 폴더 생성 및 카테고리 분류 시스템 구현 | 2026-07-11 | `app/lib/screens/folder/folder_list_screen.dart`(루트 폴더 목록 + 통계 + 생성), `app/lib/screens/folder/folder_detail_screen.dart`(서브폴더 최대 2단계 + 폴더 내 그리드 + 편집/삭제/병합), `app/lib/widgets/folder_form_dialog.dart`, `app/lib/widgets/folder_picker.dart`, `app/lib/widgets/collection_grid_view.dart`(그리드 렌더링 공용화). 홈 화면에 하단 네비게이션(도감/폴더 탭) 추가, 등록 폼·상세 화면에 폴더 선택/이동(F4.3) 연결. 리포지토리에 폴더 CRUD/통계/병합/이동 추가, 유닛테스트 7건 추가. **실기기에서 폴더 생성→아이템 이동→통계 반영까지 검증, 실기기 조작 중 실제 버그 2건 발견·수정**(등록 폼 태그 위치 관련 setState 오류는 아님 — 아래 참고) |
 
 ### 진행 중인 태스크
 
@@ -66,12 +67,14 @@ pong_dang/
 
 ### 대기 중인 태스크
 
-> 일정표상 날짜는 참고용이며, 실제로는 완료된 작업 기준으로 다음 작업을 바로 이어서 진행합니다.
+> Phase 1(수집 및 도감 MVP)이 T101~T303까지 전부 완료되어, 다음은 Phase 2(디지털 다꾸 및 달력 연동)입니다. 일정표(`pong_dang_project_roadmap.xlsx`)의 T401 이후 날짜는 아직 원안 추정치 그대로라 재산정이 필요합니다.
 
-**Phase 1-3: 로컬 MVP 개발**
-| 태스크 ID | 작업 내용 | 예정일 |
+**Phase 2: 디지털 다꾸 및 달력 연동**
+| 태스크 ID | 작업 내용 | 예정일(원안, 재산정 필요) |
 |-----------|----------|--------|
-| T303 | 폴더 생성 및 카테고리 분류 시스템 구현 | 2026-07-25 ~ 07-28 |
+| T401 | 달력(캘린더) 기본 폼 UI 구현 | 2026-07-29 ~ 07-31 |
+| T402 | 달력 날짜 칸에 수집 스티커 배치 및 저장 로직 | 2026-08-01 ~ 08-05 |
+| T403 | 다꾸 캔버스 스페이스 및 결과물 이미지 저장 기능 | 2026-08-06 ~ 08-08 |
 
 ---
 
@@ -191,10 +194,21 @@ pong_dang/
    - 등록 폼 태그 입력: 태그 칩이 입력 필드 왼쪽에 쌓이며 입력 필드가 계속 밀리는 문제 → 입력 필드를 항상 고정 위치(상단)에 두고, 칩은 그 아래 별도 `Wrap`으로 이동(칩끼리는 기존처럼 옆으로 배치, 필드 위치는 고정)
    - 도감 상세 화면: 투명 배경이 체커보드 패턴으로 보여 거슬리는 문제 → 등록 폼(크롭 확인용) 미리보기는 체커보드 유지, 상세 화면은 `Theme.of(context).scaffoldBackgroundColor`로 배경을 채워 앱 배경색과 자연스럽게 어우러지도록 수정
    - 두 수정 모두 재빌드 후 실기기에서 스크린샷으로 재검증 완료
+7. `pong_dang_project_roadmap.xlsx` 일정표를 실제 완료일/상태로 갱신 (openpyxl로 직접 편집). T303 시작일만 T302 다음날로 당기고, Phase 2 이후는 재산정 필요 메모만 남김
+8. T303 구현: 폴더 생성 및 카테고리 분류 시스템 (F4-FOLDER)
+   - 리포지토리 확장: `listFolders`(루트/서브 분리), `listAllFolders`, `getFolder`, `getFolderStats`(아이템 수·서브폴더 수·최근 추가일), `updateFolder`, `deleteFolder`, `mergeFolders`(아이템 이관 후 소스 폴더 삭제), `moveItemToFolder`
+   - `folder_form_dialog.dart` — 이름/아이콘(8종 이모지)/색상(T103 팔레트에서 6색) 선택 다이얼로그, 생성/편집 겸용
+   - `folder_picker.dart` — 폴더 트리(루트+서브 들여쓰기)를 보여주는 바텀시트. 반환값은 `null`(닫기, 변경 없음) / `''`(미분류) / 폴더id로 3가지를 구분 — 처음엔 `null`을 미분류로 써서 시트를 그냥 닫아도 기존 선택이 사라지는 버그가 될 뻔해서 빈 문자열 신호로 수정
+   - `folder_list_screen.dart`(루트 폴더 + 통계 + 생성), `folder_detail_screen.dart`(서브폴더 최대 2단계 + 폴더 내 아이템 그리드 + 편집/병합/삭제)
+   - `collection_grid_view.dart`로 그리드 카드 렌더링을 홈 화면에서 분리해 폴더 상세 화면과 공유
+   - 홈 화면에 `NavigationBar`(도감/폴더 탭, `IndexedStack`으로 상태 유지) 추가, 등록 폼에 폴더 선택 드롭다운, 상세 화면에 폴더 표시+이동 액션(F4.3) 연결. 상세 화면은 삭제뿐 아니라 폴더 이동도 "변경됨"으로 취급해야 해서 `PopScope`로 뒤로가기를 가로채 항상 `_changed` 플래그를 반환하도록 수정
+   - 리포지토리 유닛테스트 7건 추가(폴더 목록 분리, 통계, 수정, cascade 삭제, 병합, 아이템 이동) — 전체 12개 테스트 통과
+   - **실기기 검증 중 실제 버그 추가 발견**: 홈 화면이 `IndexedStack`으로 도감/폴더 탭 상태를 유지하는데, 도감 탭에서 아이템을 폴더로 이동해도 폴더 탭(이미 살아있는 인스턴스)은 새로고침될 방법이 없어 폴더 아이템 통계가 계속 "비어있음"으로 stale하게 남는 문제 발견 → 아이템이 바뀔 때마다 증가하는 `_folderTabToken`을 폴더 탭 위젯의 `key`로 사용해, 변경 시마다 폴더 탭을 새 인스턴스로 재생성(=강제 새로고침)하도록 수정. 실기기에서 재현 시나리오 그대로 재검증해 수정 확인
 
 **다음 세션 TODO:**
 - [ ] (선택) T203 스티커 캔버스에서 드래그/핀치/회전 직접 조작 확인
-- [ ] T303 폴더 생성 및 카테고리 분류 시스템 구현 (폴더 선택 UI를 등록 폼에도 연결)
+- [ ] (선택) T303 폴더 편집/삭제/병합/서브폴더 플로우 실기기 추가 확인 (생성·이동·통계는 확인 완료, 이 3개는 코드상 동일 위젯 재사용이라 미확인 상태로 남음)
+- [ ] Phase 2 착수: T401 달력 기본 폼 UI 구현 (일정 재산정 먼저 필요)
 - [ ] F3.5 검색/라벨 필터링 UI (리포지토리 쿼리는 준비돼 있음, 화면 미구현)
 - [ ] 작업 단위별로 커밋 후 GitHub에 푸시하며 진행
 
@@ -218,6 +232,9 @@ pong_dang/
 | 위젯 테스트에서 sqflite 사용 (T302) | `testWidgets` 내에서 `sqflite_common_ffi`를 쓸 때는 `tester.runAsync()`로 감싸고, `pumpAndSettle()` 대신 실제 `Future.delayed` + `pump()` 사용 | `testWidgets`는 기본적으로 가상 시간(zone)에서 동작해 ffi가 사용하는 실제 비동기(격리 프로세스) 응답을 받지 못해 무한 대기함. `pumpAndSettle()`도 인디케이터의 반복 애니메이션 때문에 타임아웃됨 — 실제 원인을 T302에서 처음 발견 | 2026-07-11 |
 | 실기기 검증 환경 (T302) | Windows 데스크톱/에뮬레이터 대신 실제 안드로이드 폰(USB 디버깅)으로 검증 | 디스크 용량이 제한적이라 Visual Studio C++ 워크로드(7~10GB)나 에뮬레이터 이미지보다 가벼운 경로 필요. 실기기가 최종 배포 타겟(Android 8+)과도 더 가까움 | 2026-07-11 |
 | AGP 버전 (android/settings.gradle.kts) | `flutter create`가 기본 생성한 9.0.1 대신 8.11.1 + Kotlin 2.2.20 사용, `compileSdk`/`targetSdk`는 36 유지 | AGP 9.0.1은 "new DSL" 관련 버그로 Flutter Gradle 플러그인과 충돌(`android.newDsl=false`로도 회피 안 됨). 8.7.3 등 더 낮은 버전은 반대로 `androidx.core` 등 의존성이 AGP 8.9.1+/SDK 36을 요구해 실패 — 8.11.1이 현재 의존성 조합과 맞는 지점 | 2026-07-11 |
+| 폴더 삭제 정책 - 서브폴더 (T303) | `folders.parent_id`는 `ON DELETE CASCADE` (T301에서 이미 결정됨), 병합(`mergeFolders`)은 아이템만 이관하고 서브폴더째 삭제 | 루트 폴더 삭제 시 서브폴더도 함께 정리되는 게 자연스러움(아이템은 T301 정책대로 미분류로 보존). 병합은 F4.4 스펙상 "서브폴더 병합" 케이스를 명시하지 않아 단순하게 아이템 이관 + 소스 삭제로 한정 | 2026-07-11 |
+| 폴더 선택 시트 반환값 (T303) | `showFolderPickerSheet`가 `null`(닫기)/`''`(미분류)/폴더id 3가지를 구분해서 반환 | 처음엔 `null`을 "미분류"로 썼는데, 시트를 그냥 닫아도 `null`이 반환되어 기존 폴더 선택이 실수로 지워지는 버그가 될 뻔함 — "닫기"와 "미분류 선택"은 다른 사용자 의도이므로 반드시 구분해야 함 | 2026-07-11 |
+| 폴더 탭 새로고침 (T303) | 홈 화면의 폴더 탭을, 아이템이 바뀔 때마다 증가하는 카운터를 `key`로 삼아 매번 새 위젯 인스턴스로 재생성 | `IndexedStack`으로 도감/폴더 탭 상태를 유지하다 보니 도감 탭에서 아이템을 폴더로 옮겨도 이미 살아있는 폴더 탭 인스턴스는 알 방법이 없어 통계가 stale해지는 실기기 버그를 발견 — RouteAware 등 정식 lifecycle보다 key 교체가 이 규모 앱에는 더 단순 | 2026-07-11 |
 
 ---
 
@@ -251,4 +268,4 @@ pong_dang/
 
 ---
 
-*마지막 업데이트: 2026-07-11 Session 3 (T203, T301, T302 완료, 실기기 검증 및 버그 수정)*
+*마지막 업데이트: 2026-07-11 Session 3 (T203, T301, T302, T303 완료 — Phase 1 전체 완료, 실기기 검증 및 버그 수정)*

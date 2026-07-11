@@ -21,6 +21,18 @@ class CollectionItem {
     this.labels = const [],
   });
 
+  CollectionItem copyWithFolderId(String? folderId) => CollectionItem(
+    id: id,
+    docNumber: docNumber,
+    imagePath: imagePath,
+    thumbnailPath: thumbnailPath,
+    rating: rating,
+    memo: memo,
+    createdAt: createdAt,
+    folderId: folderId,
+    labels: labels,
+  );
+
   Map<String, Object?> toRow() => {
     'id': id,
     'doc_number': docNumber,

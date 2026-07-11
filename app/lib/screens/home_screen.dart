@@ -1,14 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/collection_repository.dart';
 import '../models/collection_item.dart';
 import '../providers/repository_providers.dart';
-import '../widgets/rating_stars.dart';
+import '../widgets/collection_grid_view.dart';
 import 'deco/sticker_canvas_screen.dart';
 import 'detail/item_detail_screen.dart';
+import 'folder/folder_list_screen.dart';
 import 'punch/image_select_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -19,8 +18,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  int _tabIndex = 0;
   ItemSortOrder _sortBy = ItemSortOrder.newest;
   late Future<List<CollectionItem>> _itemsFuture;
+  // Bumped whenever items change so the folder tab (kept alive by
+  // IndexedStack) is recreated with a fresh key and reloads its stats —
+  // it has no other way to know an item moved in/out of a folder while
+  // it sat in the background.
+  int _folderTabToken = 0;
 
   @override
   void initState() {
@@ -29,14 +34,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<List<CollectionItem>> _load() {
-    return ref
-        .read(collectionRepositoryProvider)
-        .listItems(sortBy: _sortBy);
+    return ref.read(collectionRepositoryProvider).listItems(sortBy: _sortBy);
   }
 
   void _reload() {
     setState(() {
       _itemsFuture = _load();
+      _folderTabToken++;
     });
   }
 
@@ -48,142 +52,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _openItem(CollectionItem item) async {
-    final deleted = await Navigator.of(context).push<bool>(
+    final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => ItemDetailScreen(item: item)),
     );
-    if (deleted == true && mounted) _reload();
+    if (changed == true && mounted) _reload();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isCollectionTab = _tabIndex == 0;
     return Scaffold(
       appBar: AppBar(
         title: const Text('퐁당'),
         actions: [
-          PopupMenuButton<ItemSortOrder>(
-            tooltip: '정렬',
-            icon: const Icon(Icons.sort),
-            onSelected: (value) => setState(() {
-              _sortBy = value;
-              _reload();
-            }),
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: ItemSortOrder.newest,
-                child: Text('최신순'),
-              ),
-              PopupMenuItem(
-                value: ItemSortOrder.ratingDesc,
-                child: Text('별점순'),
-              ),
-            ],
-          ),
-          IconButton(
-            tooltip: '다꾸 캔버스 (T203 검증)',
-            icon: const Icon(Icons.auto_awesome_outlined),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const StickerCanvasScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<CollectionItem>>(
-        future: _itemsFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final items = snapshot.data!;
-          if (items.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  '아직 등록된 도감이 없습니다.\n오른쪽 아래 + 버튼으로 첫 수집을 펀치해보세요.',
-                  textAlign: TextAlign.center,
+          if (isCollectionTab) ...[
+            PopupMenuButton<ItemSortOrder>(
+              tooltip: '정렬',
+              icon: const Icon(Icons.sort),
+              onSelected: (value) => setState(() {
+                _sortBy = value;
+                _reload();
+              }),
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: ItemSortOrder.newest,
+                  child: Text('최신순'),
                 ),
-              ),
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async => _reload(),
-            child: GridView.builder(
-              padding: const EdgeInsets.all(12),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.78,
-              ),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return _CollectionCard(
-                  item: item,
-                  onTap: () => _openItem(item),
+                PopupMenuItem(
+                  value: ItemSortOrder.ratingDesc,
+                  child: Text('별점순'),
+                ),
+              ],
+            ),
+            IconButton(
+              tooltip: '다꾸 캔버스 (T203 검증)',
+              icon: const Icon(Icons.auto_awesome_outlined),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const StickerCanvasScreen(),
+                  ),
                 );
               },
             ),
-          );
-        },
+          ],
+        ],
+      ),
+      body: IndexedStack(
+        index: _tabIndex,
+        children: [
+          FutureBuilder<List<CollectionItem>>(
+            future: _itemsFuture,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return CollectionGridView(
+                items: snapshot.data!,
+                emptyMessage: '아직 등록된 도감이 없습니다.\n오른쪽 아래 + 버튼으로 첫 수집을 펀치해보세요.',
+                onTapItem: _openItem,
+                onRefresh: () async => _reload(),
+              );
+            },
+          ),
+          FolderListScreen(key: ValueKey(_folderTabToken)),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tabIndex,
+        onDestinationSelected: (index) => setState(() => _tabIndex = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.grid_view), label: '도감'),
+          NavigationDestination(icon: Icon(Icons.folder_outlined), label: '폴더'),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openPunchFlow,
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class _CollectionCard extends StatelessWidget {
-  final CollectionItem item;
-  final VoidCallback onTap;
-  const _CollectionCard({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Image.file(
-                File(item.thumbnailPath),
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const ColoredBox(
-                      color: Color(0xFFEFEFEF),
-                      child: Icon(Icons.broken_image_outlined),
-                    ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 6,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'No.${item.docNumber.toString().padLeft(3, '0')}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  RatingStars(rating: item.rating, size: 12),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

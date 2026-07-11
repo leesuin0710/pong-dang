@@ -139,4 +139,122 @@ class CollectionRepository {
   Future<void> deleteItem(String id) async {
     await _db.delete('items', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<List<Folder>> listFolders({String? parentId}) async {
+    final where = parentId == null ? 'parent_id IS NULL' : 'parent_id = ?';
+    final whereArgs = parentId == null ? null : [parentId];
+    final rows = await _db.query(
+      'folders',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'created_at ASC',
+    );
+    return [for (final row in rows) Folder.fromRow(row)];
+  }
+
+  Future<Folder?> getFolder(String id) async {
+    final rows = await _db.query(
+      'folders',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : Folder.fromRow(rows.first);
+  }
+
+  /// All folders, flattened (both root and sub-level — max 2 levels deep).
+  Future<List<Folder>> listAllFolders() async {
+    final rows = await _db.query('folders', orderBy: 'created_at ASC');
+    return [for (final row in rows) Folder.fromRow(row)];
+  }
+
+  Future<FolderStats> getFolderStats(String folderId) async {
+    final itemCount =
+        Sqflite.firstIntValue(
+          await _db.rawQuery(
+            'SELECT COUNT(*) FROM items WHERE folder_id = ?',
+            [folderId],
+          ),
+        ) ??
+        0;
+    final subfolderCount =
+        Sqflite.firstIntValue(
+          await _db.rawQuery(
+            'SELECT COUNT(*) FROM folders WHERE parent_id = ?',
+            [folderId],
+          ),
+        ) ??
+        0;
+    final lastAddedRow = (await _db.rawQuery(
+      'SELECT MAX(created_at) AS last FROM items WHERE folder_id = ?',
+      [folderId],
+    )).first;
+    final lastAddedMs = lastAddedRow['last'] as int?;
+    return FolderStats(
+      itemCount: itemCount,
+      subfolderCount: subfolderCount,
+      lastAddedAt: lastAddedMs == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(lastAddedMs),
+    );
+  }
+
+  Future<void> updateFolder(
+    String id, {
+    String? name,
+    String? iconEmoji,
+    String? colorHex,
+  }) async {
+    final values = <String, Object?>{
+      'name': ?name,
+      'icon_emoji': ?iconEmoji,
+      'color_hex': ?colorHex,
+    };
+    if (values.isEmpty) return;
+    await _db.update('folders', values, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Deletes [id]. Subfolders cascade-delete (FK); their items and this
+  /// folder's own items fall back to unclassified (folder_id = NULL).
+  Future<void> deleteFolder(String id) async {
+    await _db.delete('folders', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Moves every item from [sourceId] into [targetId], then removes the
+  /// now-empty source folder (F4.4 병합).
+  Future<void> mergeFolders({
+    required String sourceId,
+    required String targetId,
+  }) async {
+    await _db.transaction((txn) async {
+      await txn.update(
+        'items',
+        {'folder_id': targetId},
+        where: 'folder_id = ?',
+        whereArgs: [sourceId],
+      );
+      await txn.delete('folders', where: 'id = ?', whereArgs: [sourceId]);
+    });
+  }
+
+  Future<void> moveItemToFolder(String itemId, String? folderId) async {
+    await _db.update(
+      'items',
+      {'folder_id': folderId},
+      where: 'id = ?',
+      whereArgs: [itemId],
+    );
+  }
+}
+
+class FolderStats {
+  final int itemCount;
+  final int subfolderCount;
+  final DateTime? lastAddedAt;
+
+  const FolderStats({
+    required this.itemCount,
+    required this.subfolderCount,
+    this.lastAddedAt,
+  });
 }

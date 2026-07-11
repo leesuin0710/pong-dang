@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../models/folder.dart';
 import '../../providers/repository_providers.dart';
 import '../../widgets/checkerboard_background.dart';
+import '../../widgets/folder_picker.dart';
 import '../../widgets/rating_stars.dart';
 
 const _uuid = Uuid();
@@ -25,12 +27,30 @@ class _RegisterFormScreenState extends ConsumerState<RegisterFormScreen> {
   final List<String> _labels = [];
   int _rating = 0;
   bool _saving = false;
+  Folder? _selectedFolder;
 
   @override
   void dispose() {
     _tagController.dispose();
     _memoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickFolder() async {
+    final repo = ref.read(collectionRepositoryProvider);
+    final allFolders = await repo.listAllFolders();
+    if (!mounted) return;
+    final result = await showFolderPickerSheet(
+      context,
+      allFolders: allFolders,
+      title: '폴더 선택',
+    );
+    if (result == null || !mounted) return; // dismissed — keep current pick
+    setState(() {
+      _selectedFolder = result.isEmpty
+          ? null
+          : allFolders.firstWhere((f) => f.id == result);
+    });
   }
 
   void _addTagFromInput() {
@@ -59,6 +79,7 @@ class _RegisterFormScreenState extends ConsumerState<RegisterFormScreen> {
             ? null
             : _memoController.text.trim(),
         labels: _labels,
+        folderId: _selectedFolder?.id,
       );
 
       if (!mounted) return;
@@ -141,6 +162,33 @@ class _RegisterFormScreenState extends ConsumerState<RegisterFormScreen> {
               decoration: const InputDecoration(
                 hintText: '한 줄 메모 또는 감상을 남겨보세요',
                 border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              '폴더 (선택)',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _pickFolder,
+              borderRadius: BorderRadius.circular(8),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      _selectedFolder == null
+                          ? '📁 미분류'
+                          : '${_selectedFolder!.iconEmoji ?? '📁'} ${_selectedFolder!.name}',
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.expand_more),
+                  ],
+                ),
               ),
             ),
           ],
