@@ -5,6 +5,7 @@ import '../data/collection_repository.dart';
 import '../models/collection_item.dart';
 import '../providers/repository_providers.dart';
 import '../widgets/collection_grid_view.dart';
+import 'calendar/calendar_screen.dart';
 import 'deco/sticker_canvas_screen.dart';
 import 'detail/item_detail_screen.dart';
 import 'folder/folder_list_screen.dart';
@@ -116,6 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
           FolderListScreen(key: ValueKey(_folderTabToken)),
+          const CalendarScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -124,6 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.grid_view), label: '도감'),
           NavigationDestination(icon: Icon(Icons.folder_outlined), label: '폴더'),
+          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: '달력'),
         ],
       ),
       floatingActionButton: FloatingActionButton(

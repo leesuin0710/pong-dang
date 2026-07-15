@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/collection_repository.dart';
 import 'data/db/app_database.dart';
+import 'data/deco_repository.dart';
 import 'providers/repository_providers.dart';
 import 'screens/home_screen.dart';
 
@@ -12,10 +13,14 @@ Future<void> main() async {
 
   final appDatabase = await AppDatabase.openDefault();
   final repository = CollectionRepository(appDatabase);
+  final decoRepository = DecoRepository(appDatabase);
 
   runApp(
     ProviderScope(
-      overrides: [collectionRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        collectionRepositoryProvider.overrideWithValue(repository),
+        decoRepositoryProvider.overrideWithValue(decoRepository),
+      ],
       child: const PongDangApp(),
     ),
   );

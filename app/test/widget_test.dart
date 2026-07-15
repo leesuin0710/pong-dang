@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:pong_dang/data/collection_repository.dart';
 import 'package:pong_dang/data/db/app_database.dart';
+import 'package:pong_dang/data/deco_repository.dart';
 import 'package:pong_dang/main.dart';
 import 'package:pong_dang/providers/repository_providers.dart';
 
@@ -19,12 +20,14 @@ void main() {
         factory: databaseFactoryFfi,
       );
       final repository = CollectionRepository(appDb);
+      final decoRepository = DecoRepository(appDb);
       addTearDown(appDb.close);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             collectionRepositoryProvider.overrideWithValue(repository),
+            decoRepositoryProvider.overrideWithValue(decoRepository),
           ],
           child: const PongDangApp(),
         ),

@@ -41,6 +41,13 @@ class AppDatabase {
             await db.execute(statement);
           }
         },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            for (final statement in kV2CreateTableStatements) {
+              await db.execute(statement);
+            }
+          }
+        },
       ),
     );
     return AppDatabase._(db);
